@@ -21,7 +21,7 @@ export function buildUserMsg(msg:UserMsg):string{
     return `[${type}]${msg.content}`;
 }
 export function buildAIMsg(msg:AIMsg):string{
-    let text = "";
+    let text = `[${msg.time}]`;
     for(const r of msg.content){
         text += `[${r.type}]${r.content}\n`;
     }
