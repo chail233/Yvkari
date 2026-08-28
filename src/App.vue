@@ -25,10 +25,13 @@
 </template>
 
 <script setup lang="ts">
-import axios from "axios";
 import {ref} from "vue";
-import type {UserMsg} from "./context.ts";
-import type {AIMsg} from "./context.ts";
+import type {UserMsg} from "../chater/data/context.ts";
+import type {AIMsg} from "../chater/data/context.ts";
+import {chat} from "../chater/llm/api.ts";
+import recorder from "../chater/llm/history.ts";
+import {buildUserMsg} from "../chater/data/context.ts";
+import {buildAIMsg} from "../chater/data/context.ts";
 
 interface Message {
     id:number;
@@ -56,21 +59,26 @@ interface Message {
       type:"text",
       content:text
     };
+    recorder.add({
+      role:"user",
+      content:buildUserMsg(data)
+    });//记录用户信息
+    console.log({
+      role:"user",
+      content:buildUserMsg(data)
+    });
     try {
-      const res = await axios({
-        url: "http://localhost:1145/chater/api",
-        method: "post",
-        data: { content: data },
-        timeout: 30000
-      });
-      const resMsg:AIMsg = res.data.data;
-      for(const msg of resMsg.content){
+      const res:AIMsg = await chat();
+      recorder.add({role:"assistant", content:buildAIMsg(res)});//记录ai信息
+      console.log({role:"assistant", content:buildAIMsg(res)});
+      for(const msg of res.content){
         const perMsg:Message = {
           role:"ai",
           id:idCounter++,
           content:msg.content
         }
         messageList.value.push(perMsg);
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
     catch (err){
@@ -78,7 +86,7 @@ interface Message {
       messageList.value.push({
         id: idCounter++,
         role: 'ai',
-        content: '网络请求出错，请检查后端服务'
+        content: '网络请求出错'
       });
     }
     finally {

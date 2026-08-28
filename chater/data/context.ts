@@ -1,7 +1,5 @@
-export interface content{
-    type: string;
-    content: string;
-}
+import type {content} from "../llm/api";
+
 export interface BaseMsg{ //所有消息的基础接口
     role: string;  //消息的发出者  ai/user
     time: string;  //消息发出的时间
@@ -20,12 +18,12 @@ export interface AIMsg extends BaseMsg{  //AI消息接口
 
 export function buildUserMsg(msg:UserMsg):string{
     const type = msg.type==="text"?"文本":"图片";
-    return `[${msg.time}][${type}]${msg.content}`;
+    return `[${type}]${msg.content}`;
 }
 export function buildAIMsg(msg:AIMsg):string{
     let text = "";
     for(const r of msg.content){
         text += `[${r.type}]${r.content}\n`;
     }
-    return `[${msg.time}][内心:${msg.think}]${text}`;
+    return `[内心:${msg.think}]${text}`;
 }
