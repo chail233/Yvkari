@@ -18,7 +18,7 @@ export interface AIMsg extends BaseMsg{  //AI消息接口
 
 export function buildUserMsg(msg:UserMsg):string{
     const type = msg.type==="text"?"文本":"图片";
-    return `[${type}]${msg.content}`;
+    return `[${msg.time}][${type}]${msg.content}`;
 }
 export function buildAIMsg(msg:AIMsg):string{
     let text = `[${msg.time}]`;
