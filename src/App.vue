@@ -2,42 +2,58 @@
   <div class="app-shell">
     <!-- Header -->
     <header class="chat-header">
+      <div class="header-bg"></div>
       <div class="header-inner">
         <div class="header-brand">
-          <span class="header-icon">✦</span>
+          <div class="header-icon-ring">
+            <span class="header-icon">✦</span>
+          </div>
           <h1>Yvkari</h1>
         </div>
-        <p class="header-subtitle">awa</p>
+        <div class="header-status">
+          <span class="status-dot"></span>
+          <span class="status-text">{{ loading ? '思考中...' : '在线' }}</span>
+        </div>
       </div>
     </header>
 
     <!-- Messages -->
     <main class="chat-main" ref="chatMainRef">
-      <div class="messages-container">
-        <div
-          v-for="item in messageList"
-          :key="item.id"
-          :class="['message', item.role === 'user' ? 'message--user' : 'message--ai']"
-        >
-          <div class="message-avatar">
-            {{ item.role === 'user' ? 'U' : 'A' }}
+      <div class="chat-main-inner">
+        <div class="messages-container">
+          <div
+            v-for="item in messageList"
+            :key="item.id"
+            :class="['message', item.role === 'user' ? 'message--user' : 'message--ai']"
+          >
+            <div class="message-avatar-wrapper">
+              <div class="message-avatar">
+                {{ item.role === 'user' ? 'U' : 'Y' }}
+              </div>
+            </div>
+            <div class="message-body">
+              <div class="message-bubble">
+                <div class="message-content">{{ item.content }}</div>
+              </div>
+              <span class="message-time">{{ item.role === 'ai' ? 'Yvkari' : '你' }} · {{ new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
+            </div>
           </div>
-          <div class="message-bubble">
-            <div class="message-content">{{ item.content }}</div>
-          </div>
-        </div>
 
-        <!-- Empty state -->
-        <div v-if="messageList.length === 0 && !loading" class="empty-state">
-          <div class="empty-icon">💬</div>
-          <p class="empty-title">开始对话</p>
-          <p class="empty-desc">在下方输入</p>
+          <!-- Empty state -->
+          <div v-if="messageList.length === 0 && !loading" class="empty-state">
+            <div class="empty-graphic">
+              <div class="empty-ring"></div>
+              <span class="empty-icon">✦</span>
+            </div>
+            <p class="empty-title">开始对话</p>
+          </div>
         </div>
       </div>
     </main>
 
     <!-- Input -->
     <footer class="chat-footer">
+      <div class="footer-bg"></div>
       <div class="input-area">
         <el-input
           v-model="inputText"
@@ -127,7 +143,7 @@ interface Message {
           id:idCounter++,
           content:msg.content
         }
-        await new Promise(resolve => setTimeout(resolve, Math.max(8000, 600*perMsg.content.length)));
+        await new Promise(resolve => setTimeout(resolve, Math.max(8000, 300*perMsg.content.length)));
         messageList.value.push(perMsg);
       }
     }
@@ -146,29 +162,48 @@ interface Message {
 </script>
 
 <style scoped>
+/* ══════════════════════════════════════════════
+   Shell – 最外层容器
+   ══════════════════════════════════════════════ */
 .app-shell {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  max-width: 860px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 0;
   background: var(--bg);
   box-shadow: var(--shadow-lg);
   position: relative;
+  overflow: hidden;
 }
 
-/* ── Header ── */
+/* ══════════════════════════════════════════════
+   Header – 第一层：顶部卡片
+   ══════════════════════════════════════════════ */
 .chat-header {
   flex-shrink: 0;
-  padding: 18px 28px;
+  position: relative;
+  z-index: 10;
+  padding: 16px 28px;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.header-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--accent-bg) 0%, transparent 80%);
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .header-inner {
+  position: relative;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
 }
 
@@ -178,59 +213,152 @@ interface Message {
   gap: 10px;
 }
 
+.header-icon-ring {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-icon-ring::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  border-top-color: var(--accent);
+  border-right-color: var(--accent);
+  animation: icon-ring-spin 1.8s linear infinite;
+  opacity: 0.6;
+}
+
+.header-icon-ring::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  border-bottom-color: var(--accent);
+  border-left-color: var(--accent);
+  animation: icon-ring-spin 2.6s linear infinite reverse;
+  opacity: 0.35;
+}
+
+@keyframes icon-ring-spin {
+  to { transform: rotate(360deg); }
+}
+
 .header-icon {
-  font-size: 22px;
+  font-size: 16px;
   color: var(--accent);
   line-height: 1;
+  position: relative;
+  z-index: 1;
 }
 
 .chat-header h1 {
   font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.3px;
+  color: var(--text-h);
 }
 
-.header-subtitle {
-  font-size: 13px;
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
   color: var(--text);
-  margin: 0;
   opacity: 0.7;
 }
 
-/* ── Messages ── */
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ══════════════════════════════════════════════
+   Chat Main – 第二层：消息区域（下沉平面）
+   ══════════════════════════════════════════════ */
 .chat-main {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 28px;
-  background: var(--chat-bg);
+  overflow-x: hidden;
+  position: relative;
+  z-index: 5;
   scroll-behavior: smooth;
+  /* 自定义滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.chat-main::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-main::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.chat-main::-webkit-scrollbar-thumb:hover {
+  background: var(--text);
+  opacity: 0.5;
+}
+
+.chat-main-inner {
+  min-height: 100%;
+  padding: 28px 28px 20px;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, var(--accent-bg) 0%, transparent 70%),
+    var(--chat-bg);
+  position: relative;
 }
 
 .messages-container {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
   max-width: 720px;
   margin: 0 auto;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
-/* ── Message Bubbles ── */
+/* ══════════════════════════════════════════════
+   Message Bubbles – 第三层：浮动气泡
+   ══════════════════════════════════════════════ */
 .message {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  animation: msg-fade-in 0.25s ease-out;
+  animation: msg-enter 0.3s ease-out;
 }
 
-@keyframes msg-fade-in {
+@keyframes msg-enter {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(12px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -238,10 +366,15 @@ interface Message {
   flex-direction: row-reverse;
 }
 
-.message-avatar {
+/* Avatar */
+.message-avatar-wrapper {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  position: relative;
+}
+
+.message-avatar {
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -249,61 +382,159 @@ interface Message {
   font-size: 13px;
   font-weight: 600;
   color: #fff;
-  margin-top: 2px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .message--user .message-avatar {
-  background: linear-gradient(135deg, #409eff, #337ecc);
+  background: linear-gradient(135deg, #409eff 0%, #2d7fd3 100%);
 }
 
 .message--ai .message-avatar {
-  background: linear-gradient(135deg, var(--accent), #8b3fd4);
+  background: linear-gradient(135deg, #f472b6 0%, #db2777 100%);
 }
 
+.message-avatar::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+
+.message--user .message-avatar::after {
+  border-color: rgba(64, 158, 255, 0.2);
+}
+
+.message--ai .message-avatar::after {
+  border-color: rgba(244, 114, 182, 0.3);
+}
+
+/* Body (bubble + time) */
+.message-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 70%;
+}
+
+.message--user .message-body {
+  align-items: flex-end;
+}
+
+/* Bubble */
 .message-bubble {
-  max-width: 75%;
-  padding: 10px 16px;
-  border-radius: 16px;
-  line-height: 1.55;
+  padding: 11px 17px;
+  border-radius: 18px;
+  line-height: 1.6;
   font-size: 14.5px;
   word-break: break-word;
   position: relative;
+  transition: box-shadow 0.2s;
+}
+
+.message-bubble:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+.message--user .message-bubble:hover {
+  box-shadow: 0 4px 14px rgba(64, 158, 255, 0.3) !important;
+}
+
+.message--ai .message-bubble:hover {
+  box-shadow: 0 4px 14px rgba(244, 114, 182, 0.15) !important;
 }
 
 .message--user .message-bubble {
-  background: linear-gradient(135deg, #409eff, #337ecc);
+  background: linear-gradient(135deg, #409eff 0%, #2d7fd3 100%);
   color: #fff;
-  border-bottom-right-radius: 4px;
-  box-shadow: 0 2px 6px rgba(64, 158, 255, 0.25);
+  border-bottom-right-radius: 5px;
+  box-shadow: 0 3px 10px rgba(64, 158, 255, 0.25);
 }
 
 .message--ai .message-bubble {
-  background: var(--bg);
+  background: rgb(204 41 127 / 0.32);
   color: var(--text-h);
-  border: 1px solid var(--border);
-  border-bottom-left-radius: 4px;
-  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(244, 114, 182, 0.2);
+  border-bottom-left-radius: 5px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .message-content {
   white-space: pre-wrap;
 }
 
-/* ── Empty State ── */
+/* Timestamp */
+.message-time {
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.45;
+  padding: 0 4px;
+  user-select: none;
+}
+
+/* ══════════════════════════════════════════════
+   Empty State
+   ══════════════════════════════════════════════ */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   flex: 1;
-  padding: 80px 20px;
+  padding: 60px 20px 40px;
   text-align: center;
 }
 
+.empty-graphic {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.empty-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  animation: ring-spin 8s linear infinite;
+}
+
+.empty-ring::before,
+.empty-ring::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+
+.empty-ring::before {
+  inset: 4px;
+  border-top-color: var(--accent);
+  border-right-color: var(--accent);
+  animation: ring-spin 4s linear infinite reverse;
+}
+
+.empty-ring::after {
+  inset: 10px;
+  border-bottom-color: var(--accent);
+  border-left-color: var(--accent);
+  animation: ring-spin 3s linear infinite;
+}
+
+@keyframes ring-spin {
+  to { transform: rotate(360deg); }
+}
+
 .empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: 0.6;
+  font-size: 24px;
+  color: var(--accent);
+  position: relative;
+  z-index: 1;
 }
 
 .empty-title {
@@ -317,17 +548,60 @@ interface Message {
   font-size: 14px;
   color: var(--text);
   opacity: 0.7;
+  margin-bottom: 24px;
 }
 
-/* ── Footer / Input ── */
+.empty-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.suggestion-chip {
+  display: inline-block;
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.suggestion-chip:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(170, 59, 255, 0.12);
+}
+
+/* ══════════════════════════════════════════════
+   Footer / Input – 第四层：底部卡片
+   ══════════════════════════════════════════════ */
 .chat-footer {
   flex-shrink: 0;
-  padding: 16px 28px 18px;
+  position: relative;
+  z-index: 10;
+  padding: 14px 28px 18px;
   border-top: 1px solid var(--border);
   background: var(--bg);
+  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.footer-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, var(--accent-bg) 0%, transparent 60%);
+  opacity: 0.3;
+  pointer-events: none;
 }
 
 .input-area {
+  position: relative;
   display: flex;
   gap: 10px;
   align-items: center;
@@ -342,94 +616,138 @@ interface Message {
 
 .chat-input :deep(.el-input__wrapper) {
   border-radius: 24px;
-  padding: 4px 18px;
-  box-shadow: var(--shadow-sm) !important;
+  padding: 4px 20px;
+  background: var(--chat-bg);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04) !important;
   border: 1px solid var(--border);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
 .chat-input :deep(.el-input__wrapper:hover) {
   border-color: var(--accent-border);
+  background: var(--bg);
 }
 
 .chat-input :deep(.el-input__wrapper.is-focus) {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-bg) !important;
+  background: var(--bg);
+  box-shadow: 0 0 0 3px var(--accent-bg), inset 0 1px 3px rgba(0, 0, 0, 0.04) !important;
 }
 
 .chat-input :deep(.el-input__inner) {
   font-size: 14px;
-  height: 40px;
+  height: 42px;
+}
+
+.chat-input :deep(.el-input__clear) {
+  color: var(--text);
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.chat-input :deep(.el-input__clear:hover) {
+  opacity: 0.8;
 }
 
 .send-btn {
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  font-size: 18px;
+  width: 42px;
+  height: 42px;
+  font-size: 20px;
   font-weight: 700;
-  transition: transform 0.15s, box-shadow 0.2s;
+  transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
 }
 
 .send-btn:hover:not(:disabled) {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.35);
+  transform: scale(1.06);
+  box-shadow: 0 4px 16px rgba(64, 158, 255, 0.35);
 }
 
 .send-btn:active:not(:disabled) {
-  transform: scale(0.95);
+  transform: scale(0.94);
 }
 
 .footer-hint {
   margin: 8px 0 0;
   font-size: 11px;
   color: var(--text);
-  opacity: 0.5;
+  opacity: 0.4;
   text-align: center;
   max-width: 720px;
   margin-left: auto;
   margin-right: auto;
 }
 
-/* ── Responsive ── */
+/* ══════════════════════════════════════════════
+   Responsive
+   ══════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .app-shell {
     height: 100dvh;
     box-shadow: none;
+    max-width: 100%;
   }
 
   .chat-header {
-    padding: 14px 18px;
+    padding: 12px 16px;
   }
 
   .chat-header h1 {
     font-size: 17px;
   }
 
-  .header-subtitle {
-    display: none;
+  .header-status {
+    font-size: 11px;
   }
 
-  .chat-main {
-    padding: 16px 14px;
+  .chat-main-inner {
+    padding: 20px 14px 16px;
   }
 
   .messages-container {
-    gap: 14px;
+    gap: 16px;
+  }
+
+  .message-body {
+    max-width: 82%;
   }
 
   .message-bubble {
-    max-width: 85%;
     font-size: 14px;
-    padding: 9px 13px;
+    padding: 9px 14px;
+  }
+
+  .message-time {
+    font-size: 10px;
+  }
+
+  .empty-state {
+    padding: 40px 16px 30px;
+  }
+
+  .empty-suggestions {
+    display: none;
   }
 
   .chat-footer {
-    padding: 12px 14px 16px;
+    padding: 10px 14px 14px;
   }
 
   .footer-hint {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .message-body {
+    max-width: 88%;
+  }
+
+  .message-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
   }
 }
 </style>
