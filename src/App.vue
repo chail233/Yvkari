@@ -10,9 +10,18 @@
           </div>
           <h1>Yvkari</h1>
         </div>
-        <div class="header-status">
-          <span class="status-dot"></span>
-          <span class="status-text">{{ loading ? '思考中...' : '在线' }}</span>
+        <div class="header-right">
+          <div class="header-status">
+            <span class="status-dot"></span>
+            <span class="status-text">{{ loading ? '思考中...' : '在线' }}</span>
+          </div>
+          <button class="menu-btn" @click="showSidebar = true" :disabled="loading">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="5" r="1.5"/>
+              <circle cx="12" cy="12" r="1.5"/>
+              <circle cx="12" cy="19" r="1.5"/>
+            </svg>
+          </button>
         </div>
       </div>
     </header>
@@ -77,6 +86,28 @@
       <p class="footer-hint">按 Enter 发送</p>
     </footer>
   </div>
+
+  <!-- Sidebar -->
+  <Transition name="sidebar-slide">
+    <aside v-if="showSidebar" class="sidebar-panel">
+      <div class="sidebar-header">
+        <h3>菜单</h3>
+        <button class="sidebar-close" @click="showSidebar = false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="sidebar-body">
+        <div class="cost-card">
+          <div class="cost-label">总消耗</div>
+          <div class="cost-value">{{ total_cost.toLocaleString() }}</div>
+          <div class="cost-unit">Tokens</div>
+        </div>
+      </div>
+    </aside>
+  </Transition>
 </template>
 
 <script setup lang="ts">
@@ -88,6 +119,10 @@ import recorder from "../chater/llm/history.ts";
 import {buildUserMsg} from "../chater/data/context.ts";
 import {buildAIMsg} from "../chater/data/context.ts";
 
+const showSidebar = ref(false);
+let total_cost = ref<number>(0);
+const cost_data = localStorage.getItem("cost_data");
+total_cost.value = cost_data ? Number(cost_data) : 0;
 interface Message {
     id:number;
     role: "user" | "ai";
@@ -137,13 +172,15 @@ interface Message {
       const res:AIMsg = await chat();
       recorder.add({role:"assistant", content:buildAIMsg(res)});//记录ai信息
       console.log({role:"assistant", content:buildAIMsg(res)});
+      total_cost.value += res.tokens;
+      localStorage.setItem("cost_data",total_cost.value.toString());
       for(const msg of res.content){
         const perMsg:Message = {
           role:"ai",
           id:idCounter++,
           content:msg.content
         }
-        await new Promise(resolve => setTimeout(resolve, Math.max(8000, 300*perMsg.content.length)));
+        await new Promise(resolve => setTimeout(resolve, Math.min(8000, 300*perMsg.content.length)));
         messageList.value.push(perMsg);
       }
     }
@@ -677,6 +714,151 @@ interface Message {
   max-width: 720px;
   margin-left: auto;
   margin-right: auto;
+}
+
+/* ══════════════════════════════════════════════
+   Header Right & Menu Button
+   ══════════════════════════════════════════════ */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.menu-btn:hover:not(:disabled) {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.menu-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════
+   Sidebar – 侧边菜单
+   ══════════════════════════════════════════════ */
+.sidebar-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  z-index: 2000;
+  background: #fff;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -6px 0 32px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.sidebar-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.sidebar-close:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.sidebar-body {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Cost Card */
+.cost-card {
+  background: linear-gradient(135deg, rgba(244, 114, 182, 0.1), rgba(168, 85, 247, 0.08));
+  border: 1px solid rgba(244, 114, 182, 0.2);
+  border-radius: 14px;
+  padding: 22px 20px;
+  text-align: center;
+  transition: box-shadow 0.2s;
+}
+
+.cost-card:hover {
+  box-shadow: 0 4px 16px rgba(244, 114, 182, 0.12);
+}
+
+.cost-label {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.7;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.cost-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-h);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  background: linear-gradient(135deg, #f472b6, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cost-unit {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.5;
+  margin-top: 6px;
+}
+
+/* ── Panel slide ── */
+.sidebar-slide-enter-active {
+  transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sidebar-slide-leave-active {
+  transition: right 0.2s ease-in;
+}
+.sidebar-slide-enter-from,
+.sidebar-slide-leave-to {
+  right: -340px;
 }
 
 /* ══════════════════════════════════════════════
