@@ -13,7 +13,7 @@
         <div class="header-right">
           <div class="header-status">
             <span class="status-dot"></span>
-            <span class="status-text">{{ loading ? '思考中...' : '在线' }}</span>
+            <span class="status-text">{{ loading ? '输入中...' : '在线' }}</span>
           </div>
           <button class="menu-btn" @click="showSidebar = true" :disabled="loading">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -100,10 +100,40 @@
         </button>
       </div>
       <div class="sidebar-body">
-        <div class="cost-card">
-          <div class="cost-label">总消耗</div>
-          <div class="cost-value">{{ total_cost.toLocaleString() }}</div>
-          <div class="cost-unit">Tokens</div>
+        <div class="sidebar-tabs">
+          <button :class="['tab-btn', { active: sidebarTab === 'stats' }]" @click="sidebarTab = 'stats'">总消耗</button>
+          <button :class="['tab-btn', { active: sidebarTab === 'settings' }]" @click="sidebarTab = 'settings'">设置</button>
+        </div>
+
+        <div v-show="sidebarTab === 'stats'" class="tab-content">
+          <div class="cost-card">
+            <div class="cost-label">总消耗</div>
+            <div class="cost-value">{{ total_cost.toLocaleString() }}</div>
+            <div class="cost-unit">Tokens</div>
+          </div>
+        </div>
+
+        <div v-show="sidebarTab === 'settings'" class="tab-content">
+          <div class="settings-group">
+            <label class="setting-label">API 地址</label>
+            <input class="setting-input" v-model="settings.baseURL" @input="saveSettings" placeholder="https://api.example.com/v1" />
+          </div>
+          <div class="settings-group">
+            <label class="setting-label">模型</label>
+            <input class="setting-input" v-model="settings.model" @input="saveSettings" placeholder="model-name" />
+          </div>
+          <div class="settings-group">
+            <label class="setting-label">温度 ({{ settings.temperature }})</label>
+            <input class="setting-range" type="range" min="0" max="1" step="0.05" v-model.number="settings.temperature" @input="saveSettings" />
+          </div>
+          <div class="settings-group">
+            <label class="setting-label">历史消息上限</label>
+            <input class="setting-input" type="number" min="1" max="500" v-model.number="settings.historyLim" @input="saveSettings" />
+          </div>
+          <div class="settings-group">
+            <label class="setting-label">API Key</label>
+            <input class="setting-input" type="password" v-model="settings.apikey" @input="saveSettings" placeholder="••••••••••••••••" />
+          </div>
         </div>
       </div>
     </aside>
@@ -120,7 +150,26 @@ import {buildUserMsg} from "../chater/data/context.ts";
 import {buildAIMsg} from "../chater/data/context.ts";
 
 const showSidebar = ref(false);
+const sidebarTab = ref<"stats" | "settings">("stats");
 let total_cost = ref<number>(0);
+
+const settings = ref({
+  baseURL: localStorage.getItem("cfg_baseURL") || "https://ws-j92tdnb3txh89s68.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+  model: localStorage.getItem("cfg_model") || "deepseek-v4-flash",
+  temperature: Number(localStorage.getItem("cfg_temperature")) || 0.2,
+  historyLim: Number(localStorage.getItem("cfg_historyLim")) || 100,
+  apikey: "",
+});
+
+function saveSettings() {
+  localStorage.setItem("cfg_baseURL", settings.value.baseURL);
+  localStorage.setItem("cfg_model", settings.value.model);
+  localStorage.setItem("cfg_temperature", String(settings.value.temperature));
+  localStorage.setItem("cfg_historyLim", String(settings.value.historyLim));
+  if (settings.value.apikey) {
+    localStorage.setItem("cfg_apikey", settings.value.apikey);
+  }
+}
 const cost_data = localStorage.getItem("cost_data");
 total_cost.value = cost_data ? Number(cost_data) : 0;
 interface Message {
@@ -847,6 +896,126 @@ interface Message {
   color: var(--text);
   opacity: 0.5;
   margin-top: 6px;
+}
+
+/* ── Sidebar Tabs ── */
+.sidebar-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  background: #f3f4f6;
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: #fff;
+  color: #08060d;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.tab-btn:hover:not(.active) {
+  color: #374151;
+}
+
+.tab-content {
+  animation: tab-fade 0.15s ease-out;
+}
+
+@keyframes tab-fade {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+/* ── Settings Form ── */
+.settings-group {
+  margin-bottom: 16px;
+}
+
+.setting-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.setting-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #e5e4e7;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #08060d;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.setting-input:focus {
+  border-color: #aa3bff;
+  box-shadow: 0 0 0 3px rgba(170, 59, 255, 0.1);
+}
+
+.setting-input::placeholder {
+  color: #9ca3af;
+}
+
+.setting-input[type="password"] {
+  letter-spacing: 2px;
+}
+
+.setting-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.setting-range {
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  background: #e5e4e7;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.setting-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #aa3bff;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(170, 59, 255, 0.3);
+  transition: transform 0.15s;
+}
+
+.setting-range::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.setting-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #aa3bff;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 4px rgba(170, 59, 255, 0.3);
 }
 
 /* ── Panel slide ── */

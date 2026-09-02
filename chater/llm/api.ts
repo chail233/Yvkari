@@ -47,17 +47,17 @@ const prompt:record= {
         "think字段的值代表角色本次回复时内心在想什么，它不会被展示给用户，用来记录角色心理活动。注意内心想法需要和行为相符，同时合情合理。\n" +
         "文本消息最后不要加句号。\n"
 }
-const client = axios.create(
-    {
-        baseURL:config.baseURL,
-        headers:{
-            "Authorization":`Bearer ${config.apikey}`,
-            "Content-Type": "application/json"
-        },
-        timeout:40000,
-    }
-);
 export async function chat():Promise<AIMsg>{
+    const client = axios.create(
+        {
+            baseURL:config.baseURL,
+            headers:{
+                "Authorization":`Bearer ${config.apikey}`,
+                "Content-Type": "application/json"
+            },
+            timeout:40000,
+        }
+    );
     let msgs = [prompt];
     for(let msg of recorder.get()){
         msgs.push(msg);
