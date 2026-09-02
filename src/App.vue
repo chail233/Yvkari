@@ -15,7 +15,7 @@
             <span class="status-dot"></span>
             <span class="status-text">{{ loading ? '输入中...' : '在线' }}</span>
           </div>
-          <button class="menu-btn" @click="showSidebar = true" :disabled="loading">
+          <button class="menu-btn" @click="showSidebar = true">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="5" r="1.5"/>
               <circle cx="12" cy="12" r="1.5"/>
@@ -67,7 +67,6 @@
         <el-input
           v-model="inputText"
           placeholder="输入消息..."
-          :disabled="loading"
           clearable
           class="chat-input"
           @keyup.enter="sendMessage"
@@ -75,12 +74,11 @@
         <el-button
           type="primary"
           @click="sendMessage"
-          :loading="loading"
           :disabled="!inputText.trim()"
           class="send-btn"
           circle
         >
-          <template v-if="!loading">↑</template>
+          ↑
         </el-button>
       </div>
       <p class="footer-hint">按 Enter 发送</p>
