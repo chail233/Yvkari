@@ -176,6 +176,13 @@ interface Message {
     content: string;
   }
   const messageList = ref<Message[]>([]);
+function save_msgL(){
+    localStorage.setItem("msgL", JSON.stringify(messageList.value));
+}
+function load_msgL(){
+    const msgL_data = localStorage.getItem("msgL");
+    if (msgL_data) messageList.value = JSON.parse(msgL_data);
+}
   const inputText = ref<string>("");
   const loading = ref(false);
   const chatMainRef = ref<HTMLElement | null>(null);
@@ -230,6 +237,8 @@ interface Message {
         await new Promise(resolve => setTimeout(resolve, Math.min(8000, 300*perMsg.content.length)));
         messageList.value.push(perMsg);
       }
+      save_msgL();
+      recorder.save();
     }
     catch (err){
       console.error("请求失败", err);
@@ -243,6 +252,8 @@ interface Message {
       loading.value = false;
     }
   }
+  recorder.load();
+  load_msgL();
 </script>
 
 <style scoped>

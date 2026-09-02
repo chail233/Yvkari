@@ -14,6 +14,14 @@ class Recorder{
     public get(){
         return [...this.data];
     }
+
+    public save(){
+        localStorage.setItem("history",JSON.stringify(this.data));
+    }
+    public load(){
+        const local_data = localStorage.getItem("history");
+        this.data = local_data ? JSON.parse(local_data) : this.data;
+    }
 }
 
 const recorder = new Recorder();
