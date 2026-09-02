@@ -1,4 +1,4 @@
-import config from "../config.ts";
+import config from "../../config.ts";
 export interface record{
     role: string;
     content: string;

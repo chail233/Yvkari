@@ -1,5 +1,5 @@
 import recorder from "./history";
-import config from "../config"
+import config from "../../config.ts"
 import type {record} from "./history";
 import axios from "axios";
 import type {AIMsg} from "../data/context.ts";
@@ -54,7 +54,7 @@ const client = axios.create(
             "Authorization":`Bearer ${config.apikey}`,
             "Content-Type": "application/json"
         },
-        timeout:20000,
+        timeout:40000,
     }
 );
 export async function chat():Promise<AIMsg>{

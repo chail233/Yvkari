@@ -41,7 +41,7 @@
       <div class="input-area">
         <el-input
           v-model="inputText"
-          placeholder="输入消息，按 Enter 发送..."
+          placeholder="输入消息..."
           :disabled="loading"
           clearable
           class="chat-input"
@@ -127,8 +127,8 @@ interface Message {
           id:idCounter++,
           content:msg.content
         }
+        await new Promise(resolve => setTimeout(resolve, Math.max(10000, 600*perMsg.content.length)));
         messageList.value.push(perMsg);
-        await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
     catch (err){
