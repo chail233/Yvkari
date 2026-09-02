@@ -127,7 +127,7 @@ interface Message {
           id:idCounter++,
           content:msg.content
         }
-        await new Promise(resolve => setTimeout(resolve, Math.max(10000, 600*perMsg.content.length)));
+        await new Promise(resolve => setTimeout(resolve, Math.max(8000, 600*perMsg.content.length)));
         messageList.value.push(perMsg);
       }
     }
