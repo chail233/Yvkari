@@ -44,7 +44,7 @@
               <div class="message-bubble">
                 <div class="message-content">{{ item.content }}</div>
               </div>
-              <span class="message-time">{{ item.role === 'ai' ? 'Yvkari' : '你' }} · {{ new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
+              <span class="message-time">{{ item.role === 'ai' ? 'Yvkari' : '你' }} · {{ item.time }}</span>
             </div>
           </div>
 
@@ -174,6 +174,7 @@ interface Message {
     id:number;
     role: "user" | "ai";
     content: string;
+    time:string;
   }
   const messageList = ref<Message[]>([]);
 function save_msgL(){
@@ -201,9 +202,10 @@ function load_msgL(){
     const text = inputText.value.trim();
     if(!text) return;
     const userMsg: Message = {
-      id:idCounter++,
-      role:"user",
-      content:text
+        id:idCounter++,
+        role:"user",
+        content:text,
+        time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     messageList.value.push(userMsg);
     inputText.value = "";
@@ -230,9 +232,10 @@ function load_msgL(){
       localStorage.setItem("cost_data",total_cost.value.toString());
       for(const msg of res.content){
         const perMsg:Message = {
-          role:"ai",
-          id:idCounter++,
-          content:msg.content
+            role:"ai",
+            id:idCounter++,
+            content:msg.content,
+            time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
         await new Promise(resolve => setTimeout(resolve, Math.min(8000, 300*perMsg.content.length)));
         messageList.value.push(perMsg);
@@ -243,9 +246,10 @@ function load_msgL(){
     catch (err){
       console.error("请求失败", err);
       messageList.value.push({
-        id: idCounter++,
-        role: 'ai',
-        content: '网络请求出错'
+          id: idCounter++,
+          role: 'ai',
+          content: '网络请求出错',
+          time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       });
     }
     finally {
