@@ -44,7 +44,7 @@
               <div class="message-bubble">
                 <div class="message-content">{{ item.content }}</div>
               </div>
-              <span class="message-time">{{ item.role === 'ai' ? 'Yvkari' : '你' }} · {{ item.time }}</span>
+              <span class="message-time">{{ item.role === 'ai' ? 'Yvkari' : item.read ? "已读" : "未读" }} · {{ item.time }}</span>
             </div>
           </div>
 
@@ -116,6 +116,10 @@
             <label class="setting-label">API 地址</label>
             <input class="setting-input" v-model="settings.baseURL" @input="saveSettings" placeholder="https://api.example.com/v1" />
           </div>
+            <div class="settings-group">
+                <label class="setting-label">API Key</label>
+                <input class="setting-input" type="password" v-model="settings.apikey" @input="saveSettings" placeholder="••••••••••••••••" />
+            </div>
           <div class="settings-group">
             <label class="setting-label">模型</label>
             <input class="setting-input" v-model="settings.model" @input="saveSettings" placeholder="model-name" />
@@ -124,14 +128,15 @@
             <label class="setting-label">温度 ({{ settings.temperature }})</label>
             <input class="setting-range" type="range" min="0" max="1" step="0.05" v-model.number="settings.temperature" @input="saveSettings" />
           </div>
+            <div class="settings-group">
+                <label class="setting-label">响应延时 ({{ settings.resp_delay }}ms)</label>
+                <input class="setting-range" type="range" min="1000" max="10000" step="1000" v-model.number="settings.resp_delay" @input="saveSettings" />
+            </div>
           <div class="settings-group">
-            <label class="setting-label">历史消息上限</label>
+            <label class="setting-label">历史对话轮数上限</label>
             <input class="setting-input" type="number" min="1" max="500" v-model.number="settings.historyLim" @input="saveSettings" />
           </div>
-          <div class="settings-group">
-            <label class="setting-label">API Key</label>
-            <input class="setting-input" type="password" v-model="settings.apikey" @input="saveSettings" placeholder="••••••••••••••••" />
-          </div>
+
         </div>
       </div>
     </aside>
@@ -146,17 +151,19 @@ import {chat} from "../chater/llm/api.ts";
 import recorder from "../chater/llm/history.ts";
 import {buildUserMsg} from "../chater/data/context.ts";
 import {buildAIMsg} from "../chater/data/context.ts";
+import config from "../config.ts";
 
 const showSidebar = ref(false);
 const sidebarTab = ref<"stats" | "settings">("stats");
 let total_cost = ref<number>(0);
 
 const settings = ref({
-  baseURL: localStorage.getItem("cfg_baseURL") || "https://ws-j92tdnb3txh89s68.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
-  model: localStorage.getItem("cfg_model") || "deepseek-v4-flash",
-  temperature: Number(localStorage.getItem("cfg_temperature")) || 0.2,
-  historyLim: Number(localStorage.getItem("cfg_historyLim")) || 100,
-  apikey: "",
+    baseURL: localStorage.getItem("cfg_baseURL") || "https://ws-j92tdnb3txh89s68.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+    model: localStorage.getItem("cfg_model") || "deepseek-v4-flash",
+    temperature: Number(localStorage.getItem("cfg_temperature")) || 0.2,
+    historyLim: Number(localStorage.getItem("cfg_historyLim")) || 100,
+    resp_delay: Number(localStorage.getItem("cfg_delay")) || 7000,
+    apikey: "",
 });
 
 function saveSettings() {
@@ -164,6 +171,7 @@ function saveSettings() {
   localStorage.setItem("cfg_model", settings.value.model);
   localStorage.setItem("cfg_temperature", String(settings.value.temperature));
   localStorage.setItem("cfg_historyLim", String(settings.value.historyLim));
+  localStorage.setItem("cfg_delay", String(settings.value.resp_delay));
   if (settings.value.apikey) {
     localStorage.setItem("cfg_apikey", settings.value.apikey);
   }
@@ -175,6 +183,7 @@ interface Message {
     role: "user" | "ai";
     content: string;
     time:string;
+    read:boolean;
   }
   const messageList = ref<Message[]>([]);
 function save_msgL(){
@@ -197,7 +206,7 @@ function load_msgL(){
   }
 
   watch(messageList, scrollToBottom, { deep: true });
-
+  let timer: number | null = null;
   async function sendMessage() {
     const text = inputText.value.trim();
     if(!text) return;
@@ -205,7 +214,8 @@ function load_msgL(){
         id:idCounter++,
         role:"user",
         content:text,
-        time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        read:false
     };
     messageList.value.push(userMsg);
     inputText.value = "";
@@ -219,45 +229,57 @@ function load_msgL(){
       role:"user",
       content:buildUserMsg(data)
     });//记录用户信息
-    console.log({
-      role:"user",
-      content:buildUserMsg(data)
-    });
-    try {
-        const res:AIMsg = await chat();
-        if(res.tokens===0){
-            throw new Error("api err");
-        }
-        recorder.add({role:"assistant", content:buildAIMsg(res)});//记录ai信息
-        console.log({role:"assistant", content:buildAIMsg(res)});
-        total_cost.value += res.tokens;
-        localStorage.setItem("cost_data",total_cost.value.toString());
-        loading.value = true;
-        for(const msg of res.content){
-            const perMsg:Message = {
-                role:"ai",
-                id:idCounter++,
-                content:msg.content,
-                time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }
-        await new Promise(resolve => setTimeout(resolve, Math.min(8000, 300*perMsg.content.length)));
-        messageList.value.push(perMsg);
+    // console.log({
+    //   role:"user",
+    //   content:buildUserMsg(data)
+    // });
+    if(timer){
+        clearTimeout(timer);
+    }
+    timer = setTimeout(getReply, config.delay);
+  }
+  async function getReply() {
+      try {
+          const res:AIMsg = await chat();
+          if(res.tokens===0){
+              throw new Error("api err");
+          }
+          recorder.add({role:"assistant", content:buildAIMsg(res)});//记录ai信息
+          console.log({role:"assistant", content:buildAIMsg(res)});
+          total_cost.value += res.tokens;
+          localStorage.setItem("cost_data",total_cost.value.toString());
+          loading.value = true;
+          for(let i=messageList.value.length-1;i>=0;i--){
+              if(messageList.value[i].role==="ai") continue;
+              if(messageList.value[i].read) continue;
+              messageList.value[i].read = true;
+          }
+          for(const msg of res.content){
+              const perMsg:Message = {
+                  role:"ai",
+                  id:idCounter++,
+                  content:msg.content,
+                  time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  read:true,
+              }
+              await new Promise(resolve => setTimeout(resolve, Math.min(5000, 100*perMsg.content.length)));
+              messageList.value.push(perMsg);
+          }
+          save_msgL();
+          recorder.save();
       }
-      save_msgL();
-      recorder.save();
-    }
-    catch (err){
-      console.error("请求失败", err);
-      // messageList.value.push({
-      //     id: idCounter++,
-      //     role: 'ai',
-      //     content: '网络请求出错',
-      //     time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      // });
-    }
-    finally {
-      loading.value = false;
-    }
+      catch (err){
+          console.error("请求失败", err);
+          // messageList.value.push({
+          //     id: idCounter++,
+          //     role: 'ai',
+          //     content: '网络请求出错',
+          //     time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          // });
+      }
+      finally {
+          loading.value = false;
+      }
   }
   recorder.load();
   load_msgL();
