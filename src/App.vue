@@ -209,7 +209,6 @@ function load_msgL(){
     };
     messageList.value.push(userMsg);
     inputText.value = "";
-    loading.value = true;
     const data:UserMsg ={
       role:"user",
       time:new Date().toLocaleString(),
@@ -225,18 +224,22 @@ function load_msgL(){
       content:buildUserMsg(data)
     });
     try {
-      const res:AIMsg = await chat();
-      recorder.add({role:"assistant", content:buildAIMsg(res)});//记录ai信息
-      console.log({role:"assistant", content:buildAIMsg(res)});
-      total_cost.value += res.tokens;
-      localStorage.setItem("cost_data",total_cost.value.toString());
-      for(const msg of res.content){
-        const perMsg:Message = {
-            role:"ai",
-            id:idCounter++,
-            content:msg.content,
-            time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        const res:AIMsg = await chat();
+        if(res.tokens===0){
+            throw new Error("api err");
         }
+        recorder.add({role:"assistant", content:buildAIMsg(res)});//记录ai信息
+        console.log({role:"assistant", content:buildAIMsg(res)});
+        total_cost.value += res.tokens;
+        localStorage.setItem("cost_data",total_cost.value.toString());
+        loading.value = true;
+        for(const msg of res.content){
+            const perMsg:Message = {
+                role:"ai",
+                id:idCounter++,
+                content:msg.content,
+                time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }
         await new Promise(resolve => setTimeout(resolve, Math.min(8000, 300*perMsg.content.length)));
         messageList.value.push(perMsg);
       }
@@ -245,12 +248,12 @@ function load_msgL(){
     }
     catch (err){
       console.error("请求失败", err);
-      messageList.value.push({
-          id: idCounter++,
-          role: 'ai',
-          content: '网络请求出错',
-          time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
+      // messageList.value.push({
+      //     id: idCounter++,
+      //     role: 'ai',
+      //     content: '网络请求出错',
+      //     time:new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      // });
     }
     finally {
       loading.value = false;
