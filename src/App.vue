@@ -124,17 +124,21 @@
             <label class="setting-label">模型</label>
             <input class="setting-input" v-model="settings.model" @input="saveSettings" placeholder="model-name" />
           </div>
+            <div class="settings-group">
+                <label class="setting-label">UserId</label>
+                <input class="setting-input" v-model="settings.userid" @input="saveSettings" placeholder="Name" />
+            </div>
           <div class="settings-group">
             <label class="setting-label">温度 ({{ settings.temperature }})</label>
-            <input class="setting-range" type="range" min="0" max="1" step="0.05" v-model.number="settings.temperature" @input="saveSettings" />
+            <input class="setting-range" type="range" min="0" max="2" step="0.1" v-model.number="settings.temperature" @input="saveSettings" />
           </div>
             <div class="settings-group">
                 <label class="setting-label">响应延时 ({{ settings.resp_delay }}ms)</label>
-                <input class="setting-range" type="range" min="1000" max="10000" step="1000" v-model.number="settings.resp_delay" @input="saveSettings" />
+                <input class="setting-range" type="range" min="3000" max="15000" step="1000" v-model.number="settings.resp_delay" @input="saveSettings" />
             </div>
           <div class="settings-group">
             <label class="setting-label">历史对话轮数上限</label>
-            <input class="setting-input" type="number" min="1" max="500" v-model.number="settings.historyLim" @input="saveSettings" />
+            <input class="setting-input" type="number" min="10" max="100" v-model.number="settings.historyLim" @input="saveSettings" />
           </div>
 
         </div>
@@ -152,18 +156,20 @@ import recorder from "../chater/llm/history.ts";
 import {buildUserMsg} from "../chater/data/context.ts";
 import {buildAIMsg} from "../chater/data/context.ts";
 import config from "../config.ts";
+import {addMemory} from "../chater/llm/memory/api.ts";
 
 const showSidebar = ref(false);
 const sidebarTab = ref<"stats" | "settings">("stats");
 let total_cost = ref<number>(0);
 
 const settings = ref({
-    baseURL: localStorage.getItem("cfg_baseURL") || "https://ws-j92tdnb3txh89s68.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+    baseURL: localStorage.getItem("cfg_baseURL") || "https://ws-j92tdnb3txh89s68.cn-beijing.maas.aliyuncs.com",
     model: localStorage.getItem("cfg_model") || "deepseek-v4-flash",
     temperature: Number(localStorage.getItem("cfg_temperature")) || 0.2,
     historyLim: Number(localStorage.getItem("cfg_historyLim")) || 100,
     resp_delay: Number(localStorage.getItem("cfg_delay")) || 7000,
     apikey: "",
+    userid:localStorage.getItem("cfg_userId") || ""
 });
 
 function saveSettings() {
@@ -172,6 +178,7 @@ function saveSettings() {
   localStorage.setItem("cfg_temperature", String(settings.value.temperature));
   localStorage.setItem("cfg_historyLim", String(settings.value.historyLim));
   localStorage.setItem("cfg_delay", String(settings.value.resp_delay));
+  localStorage.setItem("cfg_userId", settings.value.userid);
   if (settings.value.apikey) {
     localStorage.setItem("cfg_apikey", settings.value.apikey);
   }
@@ -233,6 +240,15 @@ function load_msgL(){
     //   role:"user",
     //   content:buildUserMsg(data)
     // });
+
+
+      if(recorder.buffer.length>=20){
+          //添加记忆片段
+          await addMemory();
+          recorder.buffer = [];
+      }
+
+
     if(timer){
         clearTimeout(timer);
     }
@@ -245,15 +261,19 @@ function load_msgL(){
               throw new Error("api err");
           }
           recorder.add({role:"assistant", content:buildAIMsg(res)});//记录ai信息
-          console.log({role:"assistant", content:buildAIMsg(res)});
+          // console.log({role:"assistant", content:buildAIMsg(res)});
           total_cost.value += res.tokens;
           localStorage.setItem("cost_data",total_cost.value.toString());
           loading.value = true;
+
+          //标记已读
           for(let i=messageList.value.length-1;i>=0;i--){
               if(messageList.value[i].role==="ai") continue;
               if(messageList.value[i].read) continue;
               messageList.value[i].read = true;
           }
+
+
           for(const msg of res.content){
               const perMsg:Message = {
                   role:"ai",
@@ -283,6 +303,7 @@ function load_msgL(){
   }
   recorder.load();
   load_msgL();
+  while (messageList.value.length>=100) messageList.value.shift();
 </script>
 
 <style scoped>

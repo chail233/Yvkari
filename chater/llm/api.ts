@@ -3,6 +3,7 @@ import config from "../../config.ts"
 import type {record} from "./history";
 import axios from "axios";
 import type {AIMsg} from "../data/context.ts";
+import {getMemory, type MemoryNode} from "./memory/api.ts";
 
 export interface content{
     type: string;
@@ -53,7 +54,7 @@ const prompt:record= {
 export async function chat():Promise<AIMsg>{
     const client = axios.create(
         {
-            baseURL:config.baseURL,
+            baseURL:config.baseURL+"/compatible-mode/v1",
             headers:{
                 "Authorization":`Bearer ${config.apikey}`,
                 "Content-Type": "application/json"
@@ -61,10 +62,23 @@ export async function chat():Promise<AIMsg>{
             timeout:60000,
         }
     );
+
+    let memNodes:Array<MemoryNode>|undefined = await getMemory();
+    if(!memNodes)memNodes=[];
+    let memPrompt:record = {
+        role:"system",
+        content:"记忆库召回结果：\n"
+    };
+    if(memNodes.length)for(let node of memNodes){
+        memPrompt.content += node.content+"\n";
+    }
+    if(memNodes.length)console.log("添加记忆库信息：",memPrompt);
     let msgs = [prompt];
     for(let msg of recorder.get()){
         msgs.push(msg);
     }
+    if(memNodes.length) msgs.push(memPrompt);
+
     const body = {
         model:config.model,
         messages:msgs,

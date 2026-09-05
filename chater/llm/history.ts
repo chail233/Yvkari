@@ -5,9 +5,13 @@ export interface record{
 }
 class Recorder{
     private data:Array<record> = [];
+    public buffer:Array<record> = [];
 
     public add(msg:record){
-        while (this.data.length >= config.historyLim) this.data.shift();
+        while (this.data.length >= config.historyLim) {
+            this.buffer.push(this.data[0]);
+            this.data.shift();
+        }
         this.data.push(msg);
     }
 
